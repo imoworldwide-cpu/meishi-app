@@ -3,505 +3,352 @@
 <head>
   <meta charset="UTF-8" />
   <meta name="viewport" content="width=device-width, initial-scale=1.0" />
-  <title>名刺管理アプリ</title>
+  <title>名刺管理 v3</title>
   <link rel="stylesheet" href="https://cdn.jsdelivr.net/npm/@tabler/icons-webfont@3.19.0/dist/tabler-icons.min.css" />
   <script src="https://cdn.jsdelivr.net/npm/@supabase/supabase-js@2"></script>
   <style>
     :root {
-      --bg: #ffffff;
-      --bg-secondary: #f5f5f3;
-      --bg-tertiary: #eeede9;
-      --text: #1a1a1a;
-      --text-secondary: #6b6b68;
-      --text-tertiary: #9b9b97;
-      --border: rgba(0,0,0,0.12);
-      --border-mid: rgba(0,0,0,0.22);
-      --radius-md: 8px;
-      --radius-lg: 12px;
-      --success-bg: #eaf3de;
-      --success-text: #27500a;
-      --danger-bg: #fcebeb;
-      --danger-text: #791f1f;
-      --font: -apple-system, BlinkMacSystemFont, 'Helvetica Neue', sans-serif;
+      --bg:#ffffff;--bg2:#f5f5f3;--bg3:#eeede9;
+      --text:#1a1a1a;--text2:#6b6b68;--text3:#9b9b97;
+      --border:rgba(0,0,0,0.12);--border2:rgba(0,0,0,0.22);
+      --r:8px;--rl:12px;--font:-apple-system,BlinkMacSystemFont,'Helvetica Neue',sans-serif;
+      --sbg:#eaf3de;--stxt:#27500a;--ebg:#fcebeb;--etxt:#791f1f;
     }
-    @media (prefers-color-scheme: dark) {
-      :root {
-        --bg: #1c1c1a;
-        --bg-secondary: #252523;
-        --bg-tertiary: #2e2e2b;
-        --text: #f0efe8;
-        --text-secondary: #a0a09a;
-        --text-tertiary: #6b6b65;
-        --border: rgba(255,255,255,0.10);
-        --border-mid: rgba(255,255,255,0.20);
-        --success-bg: #173404;
-        --success-text: #c0dd97;
-        --danger-bg: #501313;
-        --danger-text: #f09595;
-      }
-    }
-    * { box-sizing: border-box; margin: 0; padding: 0; }
-    body { font-family: var(--font); background: var(--bg-tertiary); color: var(--text); min-height: 100vh; }
-
-    /* Setup screen */
-    #setupScreen { display: flex; align-items: center; justify-content: center; min-height: 100vh; padding: 1.5rem; }
-    .setup-card { background: var(--bg); border: 0.5px solid var(--border); border-radius: var(--radius-lg); padding: 2rem; width: 480px; max-width: 100%; }
-    .setup-card h1 { font-size: 20px; font-weight: 500; margin-bottom: 0.5rem; }
-    .setup-card .desc { font-size: 13px; color: var(--text-secondary); margin-bottom: 1.5rem; line-height: 1.6; }
-    .setup-steps { background: var(--bg-secondary); border-radius: var(--radius-md); padding: 1rem 1.25rem; margin-bottom: 1.5rem; font-size: 13px; color: var(--text-secondary); line-height: 2; }
-    .setup-steps a { color: #185FA5; }
-    .form-group { margin-bottom: 12px; }
-    .form-group label { display: block; font-size: 12px; color: var(--text-secondary); margin-bottom: 4px; }
-    .form-group input { width: 100%; padding: 8px 12px; border: 0.5px solid var(--border-mid); border-radius: var(--radius-md); font-size: 13px; background: var(--bg); color: var(--text); }
-    .form-group input:focus { outline: none; border-color: #185FA5; }
-
-    /* App layout */
-    #appScreen { display: none; }
-    .topbar { background: var(--bg); border-bottom: 0.5px solid var(--border); padding: 0 1.5rem; height: 56px; display: flex; align-items: center; justify-content: space-between; position: sticky; top: 0; z-index: 10; }
-    .topbar h1 { font-size: 16px; font-weight: 500; display: flex; align-items: center; gap: 8px; }
-    .topbar-actions { display: flex; gap: 8px; }
-    .main { max-width: 960px; margin: 0 auto; padding: 1.5rem; }
-    .stat-bar { display: grid; grid-template-columns: repeat(3, 1fr); gap: 12px; margin-bottom: 1.5rem; }
-    .stat { background: var(--bg); border: 0.5px solid var(--border); border-radius: var(--radius-md); padding: 0.875rem 1rem; }
-    .stat .val { font-size: 24px; font-weight: 500; }
-    .stat .lbl { font-size: 12px; color: var(--text-secondary); margin-top: 2px; }
-    .search-row { display: flex; gap: 8px; margin-bottom: 1rem; }
-    .search-row input { flex: 1; padding: 8px 14px; border: 0.5px solid var(--border-mid); border-radius: var(--radius-md); font-size: 14px; background: var(--bg); color: var(--text); }
-    .search-row input:focus { outline: none; border-color: #185FA5; }
-    .filter-row { display: flex; gap: 8px; flex-wrap: wrap; margin-bottom: 1.25rem; }
-    .chip { padding: 5px 14px; border-radius: 999px; border: 0.5px solid var(--border-mid); background: var(--bg); color: var(--text-secondary); font-size: 12px; cursor: pointer; transition: all 0.12s; }
-    .chip.active { background: var(--text); color: var(--bg); border-color: transparent; }
-    .cards-grid { display: grid; grid-template-columns: repeat(auto-fill, minmax(280px, 1fr)); gap: 12px; }
-    .card { background: var(--bg); border: 0.5px solid var(--border); border-radius: var(--radius-lg); padding: 1rem 1.25rem; cursor: pointer; transition: border-color 0.12s; }
-    .card:hover { border-color: var(--border-mid); }
-    .card-top { display: flex; gap: 12px; margin-bottom: 12px; }
-    .avatar { width: 42px; height: 42px; border-radius: 50%; display: flex; align-items: center; justify-content: center; font-size: 13px; font-weight: 500; flex-shrink: 0; }
-    .card-info h3 { font-size: 14px; font-weight: 500; }
-    .card-info .role { font-size: 12px; color: var(--text-secondary); margin-top: 2px; }
-    .card-info .co { font-size: 12px; color: var(--text-tertiary); }
-    .divider { border: none; border-top: 0.5px solid var(--border); margin: 10px 0; }
-    .card-row { display: flex; align-items: center; gap: 8px; font-size: 12px; color: var(--text-secondary); margin-bottom: 5px; }
-    .card-row i { font-size: 14px; color: var(--text-tertiary); }
-    .tag { display: inline-block; padding: 2px 8px; border-radius: 4px; font-size: 11px; margin: 4px 4px 0 0; }
-    .empty { text-align: center; padding: 4rem 1rem; color: var(--text-secondary); }
-    .empty i { font-size: 36px; display: block; margin-bottom: 12px; color: var(--text-tertiary); }
-
-    /* Buttons */
-    .btn { padding: 7px 14px; border: 0.5px solid var(--border-mid); border-radius: var(--radius-md); background: var(--bg); color: var(--text); font-size: 13px; cursor: pointer; display: inline-flex; align-items: center; gap: 6px; transition: background 0.12s; white-space: nowrap; }
-    .btn:hover { background: var(--bg-secondary); }
-    .btn-primary { background: var(--text); color: var(--bg); border-color: transparent; }
-    .btn-primary:hover { opacity: 0.85; }
-    .btn-danger { color: var(--danger-text); border-color: rgba(162,45,45,0.3); }
-    .btn-danger:hover { background: var(--danger-bg); }
-
-    /* Modals */
-    .overlay { position: fixed; inset: 0; background: rgba(0,0,0,0.48); display: flex; align-items: center; justify-content: center; z-index: 200; padding: 1rem; }
-    .overlay.hidden { display: none; }
-    .modal { background: var(--bg); border: 0.5px solid var(--border-mid); border-radius: var(--radius-lg); padding: 1.5rem; width: 460px; max-width: 100%; max-height: 90vh; overflow-y: auto; }
-    .modal h2 { font-size: 16px; font-weight: 500; margin-bottom: 1.25rem; }
-    .modal-footer { display: flex; justify-content: flex-end; gap: 8px; margin-top: 1.25rem; }
-
-    /* Camera */
-    .cam-options { display: grid; grid-template-columns: 1fr 1fr; gap: 12px; margin-bottom: 1.25rem; }
-    .cam-opt { border: 0.5px solid var(--border-mid); border-radius: var(--radius-lg); padding: 1.25rem 1rem; text-align: center; cursor: pointer; color: var(--text-secondary); font-size: 13px; transition: all 0.12s; }
-    .cam-opt:hover { border-color: var(--border-mid); background: var(--bg-secondary); }
-    .cam-opt i { font-size: 28px; display: block; margin-bottom: 8px; color: var(--text); }
-    .cam-opt .sub { font-size: 11px; color: var(--text-tertiary); margin-top: 4px; }
-    .preview-img { width: 100%; border-radius: var(--radius-md); margin-bottom: 1rem; max-height: 180px; object-fit: contain; background: var(--bg-secondary); display: block; }
-    .status-bar { font-size: 13px; padding: 0.75rem 1rem; border-radius: var(--radius-md); background: var(--bg-secondary); color: var(--text-secondary); margin-bottom: 1rem; display: flex; align-items: center; gap: 8px; }
-    .status-bar.success { background: var(--success-bg); color: var(--success-text); }
-    .status-bar.error { background: var(--danger-bg); color: var(--danger-text); }
-    .hidden { display: none !important; }
-
-    /* Auth bar */
-    .auth-bar { font-size: 12px; color: var(--text-tertiary); display: flex; align-items: center; gap: 6px; }
-    .auth-dot { width: 7px; height: 7px; border-radius: 50%; background: #639922; flex-shrink: 0; }
-
-    @media (max-width: 500px) {
-      .stat-bar { grid-template-columns: repeat(3, 1fr); }
-      .cam-options { grid-template-columns: 1fr 1fr; }
-      .topbar { padding: 0 1rem; }
-      .main { padding: 1rem; }
-    }
+    @media(prefers-color-scheme:dark){:root{
+      --bg:#1c1c1a;--bg2:#252523;--bg3:#2e2e2b;
+      --text:#f0efe8;--text2:#a0a09a;--text3:#6b6b65;
+      --border:rgba(255,255,255,0.10);--border2:rgba(255,255,255,0.20);
+      --sbg:#173404;--stxt:#c0dd97;--ebg:#501313;--etxt:#f09595;
+    }}
+    *{box-sizing:border-box;margin:0;padding:0;}
+    body{font-family:var(--font);background:var(--bg3);color:var(--text);min-height:100vh;}
+    #setup{display:flex;align-items:center;justify-content:center;min-height:100vh;padding:1.5rem;}
+    .setup-card{background:var(--bg);border:0.5px solid var(--border);border-radius:var(--rl);padding:2rem;width:480px;max-width:100%;}
+    .setup-card h1{font-size:20px;font-weight:500;margin-bottom:.5rem;}
+    .desc{font-size:13px;color:var(--text2);margin-bottom:1.5rem;line-height:1.6;}
+    .steps{background:var(--bg2);border-radius:var(--r);padding:1rem 1.25rem;margin-bottom:1.5rem;font-size:13px;color:var(--text2);line-height:2;}
+    .steps a{color:#185FA5;}
+    .fg{margin-bottom:12px;}
+    .fg label{display:block;font-size:12px;color:var(--text2);margin-bottom:4px;}
+    .fg input{width:100%;padding:8px 12px;border:0.5px solid var(--border2);border-radius:var(--r);font-size:13px;background:var(--bg);color:var(--text);}
+    #app{display:none;}
+    .topbar{background:var(--bg);border-bottom:0.5px solid var(--border);padding:0 1.5rem;height:56px;display:flex;align-items:center;justify-content:space-between;position:sticky;top:0;z-index:10;}
+    .topbar h1{font-size:16px;font-weight:500;display:flex;align-items:center;gap:8px;}
+    .main{max-width:960px;margin:0 auto;padding:1.5rem;}
+    .stats{display:grid;grid-template-columns:repeat(3,1fr);gap:12px;margin-bottom:1.5rem;}
+    .stat{background:var(--bg);border:0.5px solid var(--border);border-radius:var(--r);padding:.875rem 1rem;}
+    .stat .val{font-size:24px;font-weight:500;}
+    .stat .lbl{font-size:12px;color:var(--text2);margin-top:2px;}
+    .search input{width:100%;padding:8px 14px;border:0.5px solid var(--border2);border-radius:var(--r);font-size:14px;background:var(--bg);color:var(--text);margin-bottom:1rem;}
+    .filters{display:flex;gap:8px;flex-wrap:wrap;margin-bottom:1.25rem;}
+    .chip{padding:5px 14px;border-radius:999px;border:0.5px solid var(--border2);background:var(--bg);color:var(--text2);font-size:12px;cursor:pointer;transition:all .12s;}
+    .chip.on{background:var(--text);color:var(--bg);border-color:transparent;}
+    .grid{display:grid;grid-template-columns:repeat(auto-fill,minmax(280px,1fr));gap:12px;}
+    .card{background:var(--bg);border:0.5px solid var(--border);border-radius:var(--rl);padding:1rem 1.25rem;cursor:pointer;transition:border-color .12s;}
+    .card:hover{border-color:var(--border2);}
+    .card-top{display:flex;gap:12px;margin-bottom:12px;}
+    .av{width:42px;height:42px;border-radius:50%;display:flex;align-items:center;justify-content:center;font-size:13px;font-weight:500;flex-shrink:0;}
+    .ci h3{font-size:14px;font-weight:500;}
+    .ci .role{font-size:12px;color:var(--text2);margin-top:2px;}
+    .ci .co{font-size:12px;color:var(--text3);}
+    hr.div{border:none;border-top:0.5px solid var(--border);margin:10px 0;}
+    .cr{display:flex;align-items:center;gap:8px;font-size:12px;color:var(--text2);margin-bottom:5px;}
+    .cr i{font-size:14px;color:var(--text3);}
+    .tag{display:inline-block;padding:2px 8px;border-radius:4px;font-size:11px;margin:4px 4px 0 0;}
+    .empty{text-align:center;padding:4rem 1rem;color:var(--text2);}
+    .empty i{font-size:36px;display:block;margin-bottom:12px;color:var(--text3);}
+    .btn{padding:7px 14px;border:0.5px solid var(--border2);border-radius:var(--r);background:var(--bg);color:var(--text);font-size:13px;cursor:pointer;display:inline-flex;align-items:center;gap:6px;transition:background .12s;white-space:nowrap;}
+    .btn:hover{background:var(--bg2);}
+    .btn:disabled{opacity:.5;cursor:not-allowed;}
+    .btnp{background:var(--text);color:var(--bg);border-color:transparent;}
+    .btnp:hover{opacity:.85;}
+    .btnd{color:var(--etxt);border-color:rgba(162,45,45,0.3);}
+    .btnd:hover{background:var(--ebg);}
+    .ov{position:fixed;inset:0;background:rgba(0,0,0,0.48);display:flex;align-items:center;justify-content:center;z-index:200;padding:1rem;}
+    .ov.h{display:none;}
+    .modal{background:var(--bg);border:0.5px solid var(--border2);border-radius:var(--rl);padding:1.5rem;width:460px;max-width:100%;max-height:90vh;overflow-y:auto;}
+    .modal h2{font-size:16px;font-weight:500;margin-bottom:1.25rem;}
+    .mf{display:flex;justify-content:flex-end;gap:8px;margin-top:1.25rem;}
+    .cam-opts{display:grid;grid-template-columns:1fr 1fr;gap:12px;margin-bottom:1.25rem;}
+    .cam-opt{border:0.5px solid var(--border2);border-radius:var(--rl);padding:1.25rem 1rem;text-align:center;cursor:pointer;color:var(--text2);font-size:13px;transition:all .12s;}
+    .cam-opt:hover{background:var(--bg2);}
+    .cam-opt i{font-size:28px;display:block;margin-bottom:8px;color:var(--text);}
+    .cam-opt .sub{font-size:11px;color:var(--text3);margin-top:4px;}
+    .prev{width:100%;border-radius:var(--r);margin-bottom:1rem;max-height:180px;object-fit:contain;background:var(--bg2);display:block;}
+    .sbar{font-size:13px;padding:.75rem 1rem;border-radius:var(--r);background:var(--bg2);color:var(--text2);margin-bottom:1rem;display:flex;align-items:center;gap:8px;}
+    .sbar.ok{background:var(--sbg);color:var(--stxt);}
+    .sbar.err{background:var(--ebg);color:var(--etxt);}
+    .err-box{font-size:12px;color:var(--etxt);background:var(--ebg);padding:.6rem .875rem;border-radius:var(--r);margin-bottom:1rem;}
+    .h{display:none!important;}
+    pre{background:var(--bg2);padding:1rem;border-radius:var(--r);overflow-x:auto;font-size:11px;line-height:1.6;margin-top:8px;}
   </style>
 </head>
 <body>
 
-<!-- ===== Supabase セットアップ画面 ===== -->
-<div id="setupScreen">
+<div id="setup">
   <div class="setup-card">
     <h1><i class="ti ti-id" style="margin-right:6px;vertical-align:-2px"></i>名刺管理アプリ</h1>
-    <p class="desc">GitHub Pages + Supabase でどのデバイスからでも使える名刺管理アプリです。初回のみSupabaseの接続情報を設定してください。</p>
-    <div class="setup-steps">
-      <strong>Supabase セットアップ手順：</strong><br>
-      1. <a href="https://supabase.com" target="_blank">supabase.com</a> でプロジェクトを作成<br>
-      2. SQL Editorで下のテーブルを作成<br>
-      3. Project URL と anon key を入力
-    </div>
-    <details style="margin-bottom:1.25rem;font-size:12px;color:var(--text-secondary)">
-      <summary style="cursor:pointer;font-weight:500;color:var(--text);margin-bottom:8px">SQLテーブル作成コード（クリックして展開）</summary>
-      <pre style="background:var(--bg-secondary);padding:1rem;border-radius:var(--radius-md);overflow-x:auto;margin-top:8px;font-size:11px;line-height:1.6">create table meishi (
+    <p class="desc">初回のみSupabaseの接続情報を設定してください。</p>
+    <div class="steps">
+      <strong>Supabaseテーブル作成SQL：</strong>
+      <details><summary style="cursor:pointer;margin-top:4px">クリックして展開</summary>
+      <pre>create table meishi (
   id uuid default gen_random_uuid() primary key,
-  name text,
-  company text,
-  title text,
-  email text,
-  phone text,
-  address text,
-  tags text[],
-  created_at timestamptz default now()
+  name text, company text, title text,
+  email text, phone text, address text,
+  tags text[], created_at timestamptz default now()
 );
--- 認証なしで読み書きできるようにする（個人利用向け）
 alter table meishi enable row level security;
-create policy "allow all" on meishi for all using (true) with check (true);</pre>
-    </details>
-    <div class="form-group">
-      <label>Supabase Project URL</label>
-      <input id="supaUrl" placeholder="https://xxxxxxxxxx.supabase.co" />
+create policy "allow all" on meishi
+  for all using (true) with check (true);</pre>
+      </details>
     </div>
-    <div class="form-group">
-      <label>Supabase Anon Key</label>
-      <input id="supaKey" placeholder="eyJhbGci..." type="password" />
-    </div>
-    <div id="setupError" class="hidden" style="font-size:12px;color:var(--danger-text);background:var(--danger-bg);padding:0.6rem 0.875rem;border-radius:var(--radius-md);margin-bottom:1rem"></div>
-    <button class="btn btn-primary" style="width:100%;justify-content:center" onclick="connectSupabase()">
+    <div class="fg"><label>Supabase Project URL</label><input id="surl" placeholder="https://xxxxxxxxxx.supabase.co" /></div>
+    <div class="fg"><label>Supabase Anon Key（Legacy anon key）</label><input id="skey" placeholder="eyJhbGci..." type="password" /></div>
+    <div id="serr" class="err-box h"></div>
+    <button class="btn btnp" id="connBtn" style="width:100%;justify-content:center" onclick="doConnect()">
       <i class="ti ti-plug"></i>接続して開始
     </button>
-    <p style="font-size:11px;color:var(--text-tertiary);text-align:center;margin-top:1rem">入力した情報はブラウザのlocalStorageに保存されます</p>
+    <p style="font-size:11px;color:var(--text3);text-align:center;margin-top:1rem">入力情報はブラウザに保存されます</p>
   </div>
 </div>
 
-<!-- ===== メインアプリ ===== -->
-<div id="appScreen">
+<div id="app">
   <div class="topbar">
     <h1><i class="ti ti-id" style="font-size:18px"></i>名刺管理</h1>
-    <div class="topbar-actions">
-      <button class="btn btn-primary" onclick="openCamera()"><i class="ti ti-camera"></i><span class="hide-sm">名刺を撮影</span></button>
-      <button class="btn" onclick="openManual()"><i class="ti ti-plus"></i><span class="hide-sm">手動入力</span></button>
+    <div style="display:flex;gap:8px">
+      <button class="btn btnp" onclick="openCam()"><i class="ti ti-camera"></i>撮影</button>
+      <button class="btn" onclick="openMan()"><i class="ti ti-plus"></i>手動入力</button>
     </div>
   </div>
   <div class="main">
-    <div class="stat-bar" id="stats"></div>
-    <div class="search-row">
-      <input id="searchInput" type="search" placeholder="名前・会社・メールで検索..." oninput="renderCards()" />
-    </div>
-    <div class="filter-row" id="filterRow"></div>
-    <div class="cards-grid" id="cardsGrid"></div>
-    <div class="empty hidden" id="emptyMsg">
-      <i class="ti ti-inbox"></i>
-      名刺がまだありません<br>
-      <span style="font-size:12px">「名刺を撮影」または「手動入力」から追加してください</span>
-    </div>
+    <div class="stats" id="stats"></div>
+    <div class="search"><input id="q" type="search" placeholder="名前・会社・メールで検索..." oninput="render()" /></div>
+    <div class="filters" id="filters"></div>
+    <div class="grid" id="grid"></div>
+    <div class="empty h" id="empty"><i class="ti ti-inbox"></i>名刺がありません</div>
   </div>
 </div>
 
-<!-- カメラモーダル -->
-<div class="overlay hidden" id="cameraOverlay">
+<!-- カメラ -->
+<div class="ov h" id="camOv">
   <div class="modal">
     <h2><i class="ti ti-camera" style="margin-right:6px"></i>名刺をスキャン</h2>
-    <div id="camStep1">
-      <div class="cam-options">
-        <div class="cam-opt" onclick="triggerCamera()">
-          <i class="ti ti-camera"></i>カメラで撮影
-          <div class="sub">スマホ・PCカメラを起動</div>
+    <div id="cs1">
+      <div class="cam-opts">
+        <div class="cam-opt" onclick="document.getElementById('ci').click()">
+          <i class="ti ti-camera"></i>カメラで撮影<div class="sub">スマホ・PCカメラ</div>
         </div>
-        <div class="cam-opt" onclick="triggerFile()">
-          <i class="ti ti-photo"></i>画像を選択
-          <div class="sub">保存済みの写真を使用</div>
+        <div class="cam-opt" onclick="document.getElementById('fi').click()">
+          <i class="ti ti-photo"></i>画像を選択<div class="sub">保存済みの写真</div>
         </div>
       </div>
-      <p style="font-size:12px;color:var(--text-tertiary);text-align:center">名刺を撮影するとAIが自動で情報を読み取ります</p>
+      <p style="font-size:12px;color:var(--text3);text-align:center">撮影するとAIが自動で情報を読み取ります</p>
     </div>
-    <div id="camStep2" class="hidden">
-      <img id="previewImg" class="preview-img" src="" alt="名刺プレビュー" />
-      <div id="scanStatus" class="status-bar"></div>
-      <div id="scannedFields" class="hidden"></div>
+    <div id="cs2" class="h">
+      <img id="prev" class="prev" src="" alt="プレビュー" />
+      <div id="ss" class="sbar"></div>
+      <div id="sf" class="h"></div>
     </div>
-    <input type="file" id="cameraInput" accept="image/*" capture="environment" class="hidden" onchange="handleImage(event)" />
-    <input type="file" id="fileInput" accept="image/*" class="hidden" onchange="handleImage(event)" />
-    <div class="modal-footer">
-      <button class="btn" onclick="closeCamera()">キャンセル</button>
-      <button class="btn hidden" id="retakeBtn" onclick="openCamera()"><i class="ti ti-refresh"></i>撮り直す</button>
-      <button class="btn btn-primary hidden" id="saveScanBtn" onclick="saveScanned()"><i class="ti ti-check"></i>保存</button>
+    <input type="file" id="ci" accept="image/*" capture="environment" class="h" onchange="onImg(event)" />
+    <input type="file" id="fi" accept="image/*" class="h" onchange="onImg(event)" />
+    <div class="mf">
+      <button class="btn" onclick="closeCam()">キャンセル</button>
+      <button class="btn h" id="retakeBtn" onclick="openCam()"><i class="ti ti-refresh"></i>撮り直す</button>
+      <button class="btn btnp h" id="saveBtn" onclick="saveScan()"><i class="ti ti-check"></i>保存</button>
     </div>
   </div>
 </div>
 
-<!-- 手動入力モーダル -->
-<div class="overlay hidden" id="manualOverlay">
+<!-- 手動 -->
+<div class="ov h" id="manOv">
   <div class="modal">
-    <h2><i class="ti ti-user-plus" style="margin-right:6px"></i>名刺を手動追加</h2>
-    <div class="form-group"><label>氏名 *</label><input id="m_name" placeholder="山田 太郎" /></div>
-    <div class="form-group"><label>会社名</label><input id="m_co" placeholder="株式会社○○" /></div>
-    <div class="form-group"><label>役職</label><input id="m_title" placeholder="営業部長" /></div>
-    <div class="form-group"><label>メール</label><input id="m_email" placeholder="yamada@example.com" /></div>
-    <div class="form-group"><label>電話番号</label><input id="m_phone" placeholder="03-0000-0000" /></div>
-    <div class="form-group"><label>タグ（カンマ区切り）</label><input id="m_tags" placeholder="顧客, IT, 東京" /></div>
-    <div class="modal-footer">
-      <button class="btn" onclick="closeManual()">キャンセル</button>
-      <button class="btn btn-primary" onclick="saveManual()"><i class="ti ti-check"></i>保存</button>
+    <h2><i class="ti ti-user-plus" style="margin-right:6px"></i>手動追加</h2>
+    <div class="fg"><label>氏名 *</label><input id="mn" placeholder="山田 太郎" /></div>
+    <div class="fg"><label>会社名</label><input id="mc" placeholder="株式会社○○" /></div>
+    <div class="fg"><label>役職</label><input id="mt" placeholder="営業部長" /></div>
+    <div class="fg"><label>メール</label><input id="me" placeholder="yamada@example.com" /></div>
+    <div class="fg"><label>電話</label><input id="mp" placeholder="03-0000-0000" /></div>
+    <div class="fg"><label>タグ（カンマ区切り）</label><input id="mg" placeholder="顧客, IT, 東京" /></div>
+    <div class="mf">
+      <button class="btn" onclick="closeMan()">キャンセル</button>
+      <button class="btn btnp" onclick="saveMan()"><i class="ti ti-check"></i>保存</button>
     </div>
   </div>
 </div>
 
-<!-- 詳細モーダル -->
-<div class="overlay hidden" id="detailOverlay">
-  <div class="modal" id="detailContent"></div>
-</div>
+<!-- 詳細 -->
+<div class="ov h" id="detOv"><div class="modal" id="detC"></div></div>
 
 <script>
-const COLORS=[{bg:'#E6F1FB',text:'#0C447C'},{bg:'#E1F5EE',text:'#085041'},{bg:'#FAECE7',text:'#712B13'},{bg:'#FBEAF0',text:'#72243E'},{bg:'#EEEDFE',text:'#3C3489'},{bg:'#FAEEDA',text:'#633806'}];
-const TC=['#E1F5EE','#EEEDFE','#E6F1FB','#FAEEDA','#FAECE7'];
+const C=[{bg:'#E6F1FB',tx:'#0C447C'},{bg:'#E1F5EE',tx:'#085041'},{bg:'#FAECE7',tx:'#712B13'},{bg:'#FBEAF0',tx:'#72243E'},{bg:'#EEEDFE',tx:'#3C3489'},{bg:'#FAEEDA',tx:'#633806'}];
+const TB=['#E1F5EE','#EEEDFE','#E6F1FB','#FAEEDA','#FAECE7'];
 const TT=['#085041','#3C3489','#0C447C','#633806','#712B13'];
+let sb=null,cards=[],tag='all';
 
-let supabase=null, cards=[], activeTag='all';
+function ini(n){if(!n)return'?';const p=n.trim().split(/\s+/);return p.length===1?n.slice(0,2):p[0][0]+p[p.length-1][0];}
+function col(i){return C[i%C.length];}
+function h(id){document.getElementById(id).classList.add('h');}
+function s(id){document.getElementById(id).classList.remove('h');}
 
-// Anthropic APIキーはGitHub Secretsまたは環境変数から取得
-// ※ 公開リポジトリにAPIキーを直接書かないこと
-const ANTHROPIC_API_KEY = window.ANTHROPIC_API_KEY || '';
-
-function initials(n){ if(!n) return '?'; const p=n.trim().split(/\s+/); return p.length===1?n.slice(0,2):p[0][0]+p[p.length-1][0]; }
-function colorFor(idx){ return COLORS[idx%COLORS.length]; }
-
-async function connectSupabase(){
-  const url=document.getElementById('supaUrl').value.trim();
-  const key=document.getElementById('supaKey').value.trim();
-  const err=document.getElementById('setupError');
-  const btn=document.querySelector('#setupScreen .btn-primary');
-  err.classList.add('hidden');
-  if(!url||!key){ err.textContent='URLとKeyを両方入力してください'; err.classList.remove('hidden'); return; }
-  if(!url.startsWith('https://')){ err.textContent='Project URLは https:// で始まる必要があります'; err.classList.remove('hidden'); return; }
-  btn.textContent='接続中...'; btn.disabled=true;
+async function doConnect(){
+  const url=document.getElementById('surl').value.trim();
+  const key=document.getElementById('skey').value.trim();
+  const eb=document.getElementById('serr');
+  const btn=document.getElementById('connBtn');
+  eb.classList.add('h');
+  if(!url||!key){eb.textContent='URLとKeyを入力してください';eb.classList.remove('h');return;}
+  btn.textContent='接続中...';btn.disabled=true;
   try{
-    // 新旧どちらのAPIキー形式にも対応
-    const opts = key.startsWith('sb_publishable_') ? {
-      auth: { persistSession: true }
-    } : {};
-    supabase=window.supabase.createClient(url, key, opts);
-    const {data, error, status}=await supabase.from('meishi').select('id').limit(1);
+    sb=window.supabase.createClient(url,key);
+    const {error,status}=await sb.from('meishi').select('id').limit(1);
     if(error){
-      if(status===401||status===403) throw new Error('認証エラー: APIキーを確認してください ('+status+')');
-      if(status===404) throw new Error('テーブルが見つかりません。SQLでmeishiテーブルを作成しましたか？');
-      throw new Error(error.message+' ('+status+')');
+      if(status===401||status===403)throw new Error('認証エラー('+status+'): Legacy anon keyを使っていますか？');
+      if(status===404)throw new Error('meishiテーブルが存在しません。SQLを実行しましたか？');
+      throw new Error(error.message+' (status:'+status+')');
     }
-    localStorage.setItem('supa_url',url);
-    localStorage.setItem('supa_key',key);
-    startApp();
+    localStorage.setItem('su',url);localStorage.setItem('sk',key);
+    go();
   }catch(e){
-    err.textContent='接続に失敗しました: '+e.message;
-    err.classList.remove('hidden');
-    btn.innerHTML='<i class="ti ti-plug"></i>接続して開始'; btn.disabled=false;
+    eb.textContent='エラー: '+e.message;eb.classList.remove('h');
+    btn.innerHTML='<i class="ti ti-plug"></i>接続して開始';btn.disabled=false;
   }
 }
 
-async function startApp(){
-  document.getElementById('setupScreen').style.display='none';
-  document.getElementById('appScreen').style.display='block';
-  await loadCards();
+async function go(){
+  h('setup');s('app');
+  const {data,error}=await sb.from('meishi').select('*').order('created_at',{ascending:false});
+  if(!error)cards=data||[];
+  render();
 }
 
-async function loadCards(){
-  const {data,error}=await supabase.from('meishi').select('*').order('created_at',{ascending:false});
-  if(!error) cards=data||[];
-  renderCards();
-}
+async function ins(c){const {data,error}=await sb.from('meishi').insert([c]).select().single();if(!error){cards.unshift(data);render();}return!error;}
+async function del(id){if(!confirm('削除しますか？'))return;const{error}=await sb.from('meishi').delete().eq('id',id);if(!error){cards=cards.filter(x=>x.id!==id);closeDet();render();}}
 
-async function insertCard(c){
-  const {data,error}=await supabase.from('meishi').insert([c]).select().single();
-  if(!error){ cards.unshift(data); renderCards(); }
-  return !error;
-}
-
-async function deleteCard(id){
-  if(!confirm('この名刺を削除しますか？')) return;
-  const {error}=await supabase.from('meishi').delete().eq('id',id);
-  if(!error){ cards=cards.filter(c=>c.id!==id); closeDetail(); renderCards(); }
-}
-
-function renderStats(){
-  const cos=new Set(cards.map(c=>c.company).filter(Boolean));
-  const tgs=new Set(cards.flatMap(c=>c.tags||[]));
-  document.getElementById('stats').innerHTML=`
-    <div class="stat"><div class="val">${cards.length}</div><div class="lbl">名刺</div></div>
-    <div class="stat"><div class="val">${cos.size}</div><div class="lbl">会社</div></div>
-    <div class="stat"><div class="val">${tgs.size}</div><div class="lbl">タグ</div></div>`;
-}
-
-function renderFilters(){
-  const tgs=[...new Set(cards.flatMap(c=>c.tags||[]))];
-  let h=`<span class="chip ${activeTag==='all'?'active':''}" onclick="setTag('all')">すべて</span>`;
-  tgs.forEach(t=>{ h+=`<span class="chip ${activeTag===t?'active':''}" onclick="setTag('${CSS.escape(t)}')">${t}</span>`; });
-  document.getElementById('filterRow').innerHTML=h;
-}
-
-function setTag(t){ activeTag=t; renderCards(); }
-
-function renderCards(){
-  renderStats(); renderFilters();
-  const q=document.getElementById('searchInput').value.toLowerCase();
-  const filtered=cards.filter(c=>{
+function render(){
+  const q=document.getElementById('q').value.toLowerCase();
+  const co=new Set(cards.map(c=>c.company).filter(Boolean));
+  const tg=new Set(cards.flatMap(c=>c.tags||[]));
+  document.getElementById('stats').innerHTML=`<div class="stat"><div class="val">${cards.length}</div><div class="lbl">名刺</div></div><div class="stat"><div class="val">${co.size}</div><div class="lbl">会社</div></div><div class="stat"><div class="val">${tg.size}</div><div class="lbl">タグ</div></div>`;
+  const tgs=[...tg];
+  let fh=`<span class="chip ${tag==='all'?'on':''}" onclick="setTag('all')">すべて</span>`;
+  tgs.forEach(t=>{fh+=`<span class="chip ${tag===t?'on':''}" onclick="setTag(\`${t}\`)">${t}</span>`;});
+  document.getElementById('filters').innerHTML=fh;
+  const f=cards.filter(c=>{
     const m=!q||[c.name,c.company,c.email,c.phone].some(v=>v&&v.toLowerCase().includes(q));
-    const tm=activeTag==='all'||(c.tags||[]).includes(activeTag);
+    const tm=tag==='all'||(c.tags||[]).includes(tag);
     return m&&tm;
   });
-  const grid=document.getElementById('cardsGrid');
-  const empty=document.getElementById('emptyMsg');
-  if(!filtered.length){ grid.innerHTML=''; empty.classList.remove('hidden'); return; }
-  empty.classList.add('hidden');
-  grid.innerHTML=filtered.map((c,i)=>{
-    const col=colorFor(i);
-    const tgs=(c.tags||[]).map((t,ti)=>`<span class="tag" style="background:${TC[ti%5]};color:${TT[ti%5]}">${t}</span>`).join('');
-    return `<div class="card" onclick="showDetail('${c.id}')">
-      <div class="card-top">
-        <div class="avatar" style="background:${col.bg};color:${col.text}">${initials(c.name)}</div>
-        <div class="card-info">
-          <h3>${c.name||'名前なし'}</h3>
-          ${c.title?`<p class="role">${c.title}</p>`:''}
-          ${c.company?`<p class="co">${c.company}</p>`:''}
-        </div>
-      </div>
-      <hr class="divider">
-      ${c.email?`<div class="card-row"><i class="ti ti-mail"></i>${c.email}</div>`:''}
-      ${c.phone?`<div class="card-row"><i class="ti ti-phone"></i>${c.phone}</div>`:''}
+  const grid=document.getElementById('grid'),emp=document.getElementById('empty');
+  if(!f.length){grid.innerHTML='';emp.classList.remove('h');return;}
+  emp.classList.add('h');
+  grid.innerHTML=f.map((c,i)=>{
+    const cl=col(i);
+    const tgs=(c.tags||[]).map((t,ti)=>`<span class="tag" style="background:${TB[ti%5]};color:${TT[ti%5]}">${t}</span>`).join('');
+    return`<div class="card" onclick="showDet('${c.id}')">
+      <div class="card-top"><div class="av" style="background:${cl.bg};color:${cl.tx}">${ini(c.name)}</div>
+      <div class="ci"><h3>${c.name||'名前なし'}</h3>${c.title?`<p class="role">${c.title}</p>`:''}${c.company?`<p class="co">${c.company}</p>`:''}</div></div>
+      <hr class="div">
+      ${c.email?`<div class="cr"><i class="ti ti-mail"></i>${c.email}</div>`:''}
+      ${c.phone?`<div class="cr"><i class="ti ti-phone"></i>${c.phone}</div>`:''}
       ${tgs?`<div>${tgs}</div>`:''}
     </div>`;
   }).join('');
 }
 
-function showDetail(id){
-  const c=cards.find(x=>x.id===id); if(!c) return;
-  const i=cards.indexOf(c); const col=colorFor(i);
-  const tgs=(c.tags||[]).map((t,ti)=>`<span class="tag" style="background:${TC[ti%5]};color:${TT[ti%5]}">${t}</span>`).join('');
-  document.getElementById('detailContent').innerHTML=`
+function setTag(t){tag=t;render();}
+
+function showDet(id){
+  const c=cards.find(x=>x.id===id);if(!c)return;
+  const i=cards.indexOf(c),cl=col(i);
+  const tgs=(c.tags||[]).map((t,ti)=>`<span class="tag" style="background:${TB[ti%5]};color:${TT[ti%5]}">${t}</span>`).join('');
+  document.getElementById('detC').innerHTML=`
     <div style="display:flex;align-items:center;gap:14px;margin-bottom:1.25rem">
-      <div class="avatar" style="width:56px;height:56px;font-size:17px;background:${col.bg};color:${col.text}">${initials(c.name)}</div>
-      <div>
-        <div style="font-size:17px;font-weight:500">${c.name||'名前なし'}</div>
-        ${c.title?`<div style="font-size:13px;color:var(--text-secondary)">${c.title}</div>`:''}
-        ${c.company?`<div style="font-size:12px;color:var(--text-tertiary)">${c.company}</div>`:''}
-      </div>
-    </div>
-    <hr class="divider">
-    ${c.email?`<div class="card-row" style="margin-bottom:8px"><i class="ti ti-mail" style="font-size:15px"></i>${c.email}</div>`:''}
-    ${c.phone?`<div class="card-row" style="margin-bottom:8px"><i class="ti ti-phone" style="font-size:15px"></i>${c.phone}</div>`:''}
-    ${c.address?`<div class="card-row" style="margin-bottom:8px"><i class="ti ti-map-pin" style="font-size:15px"></i>${c.address}</div>`:''}
+      <div class="av" style="width:56px;height:56px;font-size:17px;background:${cl.bg};color:${cl.tx}">${ini(c.name)}</div>
+      <div><div style="font-size:17px;font-weight:500">${c.name||'名前なし'}</div>
+      ${c.title?`<div style="font-size:13px;color:var(--text2)">${c.title}</div>`:''}
+      ${c.company?`<div style="font-size:12px;color:var(--text3)">${c.company}</div>`:''}
+      </div></div>
+    <hr class="div">
+    ${c.email?`<div class="cr" style="margin-bottom:8px"><i class="ti ti-mail" style="font-size:15px"></i>${c.email}</div>`:''}
+    ${c.phone?`<div class="cr" style="margin-bottom:8px"><i class="ti ti-phone" style="font-size:15px"></i>${c.phone}</div>`:''}
+    ${c.address?`<div class="cr" style="margin-bottom:8px"><i class="ti ti-map-pin" style="font-size:15px"></i>${c.address}</div>`:''}
     ${tgs?`<div style="margin-top:10px">${tgs}</div>`:''}
-    <div class="modal-footer">
-      <button class="btn btn-danger" onclick="deleteCard('${c.id}')"><i class="ti ti-trash"></i>削除</button>
-      <button class="btn btn-primary" onclick="closeDetail()">閉じる</button>
+    <div class="mf">
+      <button class="btn btnd" onclick="del('${c.id}')"><i class="ti ti-trash"></i>削除</button>
+      <button class="btn btnp" onclick="closeDet()">閉じる</button>
     </div>`;
-  document.getElementById('detailOverlay').classList.remove('hidden');
+  s('detOv');
 }
-function closeDetail(){ document.getElementById('detailOverlay').classList.add('hidden'); }
+function closeDet(){h('detOv');}
 
-/* カメラ */
-function openCamera(){
-  document.getElementById('camStep1').classList.remove('hidden');
-  document.getElementById('camStep2').classList.add('hidden');
-  document.getElementById('saveScanBtn').classList.add('hidden');
-  document.getElementById('retakeBtn').classList.add('hidden');
-  document.getElementById('scannedFields').classList.add('hidden');
-  document.getElementById('cameraOverlay').classList.remove('hidden');
+function openCam(){
+  s('cs1');h('cs2');h('saveBtn');h('retakeBtn');h('sf');
+  document.getElementById('ss').className='sbar';
+  s('camOv');
 }
-function closeCamera(){ document.getElementById('cameraOverlay').classList.add('hidden'); }
-function triggerCamera(){ document.getElementById('cameraInput').value=''; document.getElementById('cameraInput').click(); }
-function triggerFile(){ document.getElementById('fileInput').value=''; document.getElementById('fileInput').click(); }
+function closeCam(){h('camOv');}
 
-async function handleImage(e){
-  const file=e.target.files[0]; if(!file) return;
-  document.getElementById('camStep1').classList.add('hidden');
-  document.getElementById('camStep2').classList.remove('hidden');
-  document.getElementById('retakeBtn').classList.remove('hidden');
-  document.getElementById('previewImg').src=URL.createObjectURL(file);
-  const st=document.getElementById('scanStatus');
-  st.className='status-bar';
-  st.innerHTML='<i class="ti ti-loader"></i>AIが名刺を読み取り中...';
-  document.getElementById('scannedFields').classList.add('hidden');
-  document.getElementById('saveScanBtn').classList.add('hidden');
-
+async function onImg(e){
+  const file=e.target.files[0];if(!file)return;
+  h('cs1');s('cs2');s('retakeBtn');
+  document.getElementById('prev').src=URL.createObjectURL(file);
+  const ss=document.getElementById('ss');
+  ss.className='sbar';ss.innerHTML='<i class="ti ti-loader"></i>AIが読み取り中...';
+  h('sf');h('saveBtn');
   const reader=new FileReader();
   reader.onload=async function(ev){
     const b64=ev.target.result.split(',')[1];
     try{
-      const apiKey = localStorage.getItem('anthropic_key') || ANTHROPIC_API_KEY;
-      if(!apiKey){ throw new Error('Anthropic APIキーが設定されていません。後述の手順を参照してください。'); }
-      const resp=await fetch('https://api.anthropic.com/v1/messages',{
+      const r=await fetch('https://api.anthropic.com/v1/messages',{
         method:'POST',
-        headers:{'Content-Type':'application/json','x-api-key':apiKey,'anthropic-version':'2023-06-01'},
+        headers:{'Content-Type':'application/json'},
         body:JSON.stringify({
-          model:'claude-opus-4-5',
-          max_tokens:800,
+          model:'claude-sonnet-4-20250514',max_tokens:800,
           messages:[{role:'user',content:[
             {type:'image',source:{type:'base64',media_type:file.type,data:b64}},
-            {type:'text',text:'この名刺画像から情報を抽出し、以下のJSONのみを返してください（前後のテキスト不要）:\n{"name":"","company":"","title":"","email":"","phone":"","address":""}\n情報がない項目は空文字にしてください。'}
+            {type:'text',text:'この名刺から情報を抽出しJSONのみ返してください:\n{"name":"","company":"","title":"","email":"","phone":"","address":""}'}
           ]}]
         })
       });
-      const data=await resp.json();
-      if(data.error) throw new Error(data.error.message);
-      const txt=data.content.map(b=>b.text||'').join('');
-      window._scanned=JSON.parse(txt.replace(/```json|```/g,'').trim());
-      st.className='status-bar success';
-      st.innerHTML='<i class="ti ti-check"></i>読み取り完了！内容を確認・修正してから保存してください';
-      renderScannedFields(window._scanned);
-      document.getElementById('saveScanBtn').classList.remove('hidden');
+      const d=await r.json();
+      if(d.error)throw new Error(d.error.message);
+      window._sc=JSON.parse(d.content.map(b=>b.text||'').join('').replace(/```json|```/g,'').trim());
+      ss.className='sbar ok';ss.innerHTML='<i class="ti ti-check"></i>読み取り完了！確認・修正してから保存してください';
+      const fl=[{i:'sn',l:'氏名',v:window._sc.name},{i:'sco',l:'会社名',v:window._sc.company},{i:'st',l:'役職',v:window._sc.title},{i:'se',l:'メール',v:window._sc.email},{i:'sp',l:'電話',v:window._sc.phone},{i:'sa',l:'住所',v:window._sc.address},{i:'sg',l:'タグ（カンマ区切り）',v:''}];
+      const sf=document.getElementById('sf');
+      sf.innerHTML='<div style="border:0.5px solid var(--border2);border-radius:var(--r);padding:12px">'+fl.map(f=>`<div class="fg"><label>${f.l}</label><input id="${f.i}" value="${(f.v||'').replace(/"/g,'&quot;')}" /></div>`).join('')+'</div>';
+      sf.classList.remove('h');s('saveBtn');
     }catch(err){
-      st.className='status-bar error';
-      st.innerHTML='<i class="ti ti-alert-circle"></i>'+err.message;
+      ss.className='sbar err';ss.innerHTML='<i class="ti ti-alert-circle"></i>'+err.message;
     }
   };
   reader.readAsDataURL(file);
 }
 
-function renderScannedFields(d){
-  const el=document.getElementById('scannedFields');
-  const flds=[{id:'sc_name',l:'氏名',v:d.name},{id:'sc_co',l:'会社名',v:d.company},{id:'sc_title',l:'役職',v:d.title},{id:'sc_email',l:'メール',v:d.email},{id:'sc_phone',l:'電話',v:d.phone},{id:'sc_addr',l:'住所',v:d.address},{id:'sc_tags',l:'タグ（カンマ区切り）',v:''}];
-  el.innerHTML='<div style="border:0.5px solid var(--border-mid);border-radius:var(--radius-md);padding:12px">'+
-    flds.map(f=>`<div class="form-group"><label>${f.l}</label><input id="${f.id}" value="${(f.v||'').replace(/"/g,'&quot;')}" /></div>`).join('')+'</div>';
-  el.classList.remove('hidden');
+async function saveScan(){
+  const c={name:document.getElementById('sn').value||null,company:document.getElementById('sco').value||null,title:document.getElementById('st').value||null,email:document.getElementById('se').value||null,phone:document.getElementById('sp').value||null,address:document.getElementById('sa').value||null,tags:document.getElementById('sg').value.split(',').map(t=>t.trim()).filter(Boolean)};
+  if(await ins(c))closeCam();
 }
 
-async function saveScanned(){
-  const c={
-    name:document.getElementById('sc_name').value||null,
-    company:document.getElementById('sc_co').value||null,
-    title:document.getElementById('sc_title').value||null,
-    email:document.getElementById('sc_email').value||null,
-    phone:document.getElementById('sc_phone').value||null,
-    address:document.getElementById('sc_addr').value||null,
-    tags:document.getElementById('sc_tags').value.split(',').map(t=>t.trim()).filter(Boolean)
-  };
-  const ok=await insertCard(c);
-  if(ok) closeCamera();
+function openMan(){['mn','mc','mt','me','mp','mg'].forEach(id=>document.getElementById(id).value='');s('manOv');}
+function closeMan(){h('manOv');}
+async function saveMan(){
+  const name=document.getElementById('mn').value.trim();
+  if(!name){alert('氏名は必須です');return;}
+  const c={name,company:document.getElementById('mc').value.trim()||null,title:document.getElementById('mt').value.trim()||null,email:document.getElementById('me').value.trim()||null,phone:document.getElementById('mp').value.trim()||null,tags:document.getElementById('mg').value.split(',').map(t=>t.trim()).filter(Boolean)};
+  if(await ins(c))closeMan();
 }
 
-function openManual(){ ['m_name','m_co','m_title','m_email','m_phone','m_tags'].forEach(id=>document.getElementById(id).value=''); document.getElementById('manualOverlay').classList.remove('hidden'); }
-function closeManual(){ document.getElementById('manualOverlay').classList.add('hidden'); }
-async function saveManual(){
-  const name=document.getElementById('m_name').value.trim();
-  if(!name){ alert('氏名は必須です'); return; }
-  const c={name,company:document.getElementById('m_co').value.trim()||null,title:document.getElementById('m_title').value.trim()||null,email:document.getElementById('m_email').value.trim()||null,phone:document.getElementById('m_phone').value.trim()||null,tags:document.getElementById('m_tags').value.split(',').map(t=>t.trim()).filter(Boolean)};
-  const ok=await insertCard(c);
-  if(ok) closeManual();
-}
+['camOv','manOv','detOv'].forEach(id=>{document.getElementById(id).addEventListener('click',e=>{if(e.target.id===id)document.getElementById(id).classList.add('h');});});
 
-// オーバーレイ外クリックで閉じる
-['cameraOverlay','manualOverlay','detailOverlay'].forEach(id=>{
-  document.getElementById(id).addEventListener('click',e=>{ if(e.target.id===id) document.getElementById(id).classList.add('hidden'); });
-});
-
-// 起動時: 保存済みの接続情報があれば自動接続
 (async()=>{
-  const url=localStorage.getItem('supa_url');
-  const key=localStorage.getItem('supa_key');
+  const url=localStorage.getItem('su'),key=localStorage.getItem('sk');
   if(url&&key){
-    document.getElementById('supaUrl').value=url;
-    document.getElementById('supaKey').value=key;
-    supabase=window.supabase.createClient(url,key);
-    try{
-      const {error}=await supabase.from('meishi').select('id').limit(1);
-      if(!error){ startApp(); return; }
-    }catch(e){}
+    document.getElementById('surl').value=url;
+    document.getElementById('skey').value=key;
+    sb=window.supabase.createClient(url,key);
+    try{const{error}=await sb.from('meishi').select('id').limit(1);if(!error){go();return;}}catch(e){}
   }
 })();
 </script>
