@@ -119,6 +119,7 @@ create policy "allow all" on meishi
     <div style="display:flex;gap:8px">
       <button class="btn btnp" onclick="openCam()"><i class="ti ti-camera"></i>撮影</button>
       <button class="btn" onclick="openMan()"><i class="ti ti-plus"></i>手動入力</button>
+      <button class="btn" onclick="openImport()"><i class="ti ti-file-import"></i>一括取込</button>
     </div>
   </div>
   <div class="main">
@@ -173,6 +174,23 @@ create policy "allow all" on meishi
     <div class="mf">
       <button class="btn" onclick="closeMan()">キャンセル</button>
       <button class="btn btnp" onclick="saveMan()"><i class="ti ti-check"></i>保存</button>
+    </div>
+  </div>
+</div>
+
+<!-- 一括取込 -->
+<div class="ov h" id="impOv">
+  <div class="modal" style="width:540px">
+    <h2><i class="ti ti-file-import" style="margin-right:6px"></i>JSON一括取込</h2>
+    <p style="font-size:13px;color:var(--text2);margin-bottom:1rem;line-height:1.6">Claude CodeでPDFを読み取って出力したJSONを貼り付けてください。</p>
+    <div style="background:var(--bg2);border-radius:var(--r);padding:1rem;margin-bottom:1rem;font-size:12px;color:var(--text2);line-height:1.7"><strong style="color:var(--text)">Claude Codeへの指示例：</strong><br>「この名刺PDFから情報を読み取って以下のJSON配列形式で出力してください：<br>[{"name":"","company":"","title":"","email":"","phone":"","address":"","tags":[]}]」</div>
+    <div class="fg"><label>JSON配列を貼り付け</label><textarea id="impJson" rows="10" style="width:100%;padding:8px 12px;border:0.5px solid var(--border2);border-radius:var(--r);font-size:12px;background:var(--bg);color:var(--text);font-family:monospace;resize:vertical" placeholder="JSONをここに貼り付け..."></textarea></div>
+    <div id="impErr" class="err-box h"></div>
+    <div id="impPrev" class="h" style="background:var(--bg2);border-radius:var(--r);padding:1rem;margin-bottom:1rem;font-size:13px;color:var(--text2)"></div>
+    <div class="mf">
+      <button class="btn" onclick="closeImport()">キャンセル</button>
+      <button class="btn" onclick="previewImport()"><i class="ti ti-eye"></i>確認</button>
+      <button class="btn btnp h" id="impSaveBtn" onclick="saveImport()"><i class="ti ti-check"></i>全件保存</button>
     </div>
   </div>
 </div>
@@ -342,7 +360,43 @@ async function saveMan(){
   if(await ins(c))closeMan();
 }
 
-['camOv','manOv','detOv'].forEach(id=>{document.getElementById(id).addEventListener('click',e=>{if(e.target.id===id)document.getElementById(id).classList.add('h');});});
+let _impData=[];
+function openImport(){
+  document.getElementById('impJson').value='';
+  document.getElementById('impErr').classList.add('h');
+  document.getElementById('impPrev').classList.add('h');
+  document.getElementById('impSaveBtn').classList.add('h');
+  _impData=[];
+  document.getElementById('impOv').classList.remove('h');
+}
+function closeImport(){document.getElementById('impOv').classList.add('h');}
+function previewImport(){
+  const eb=document.getElementById('impErr'),pv=document.getElementById('impPrev');
+  eb.classList.add('h');pv.classList.add('h');document.getElementById('impSaveBtn').classList.add('h');
+  try{
+    const txt=document.getElementById('impJson').value.trim();
+    const parsed=JSON.parse(txt);
+    if(!Array.isArray(parsed))throw new Error('JSON配列（[...]）で入力してください');
+    _impData=parsed;
+    pv.innerHTML='<strong>'+parsed.length+'件を取込予定：</strong><br><br>'+
+      parsed.map(c=>'<span style="display:inline-block;margin:2px 4px;padding:2px 8px;background:var(--bg);border-radius:4px;font-size:12px">'+(c.name||'名前なし')+(c.company?' / '+c.company:'')+'</span>').join('');
+    pv.classList.remove('h');document.getElementById('impSaveBtn').classList.remove('h');
+  }catch(e){eb.textContent='JSONの形式が正しくありません: '+e.message;eb.classList.remove('h');}
+}
+async function saveImport(){
+  const btn=document.getElementById('impSaveBtn');
+  btn.textContent='保存中...';btn.disabled=true;
+  let ok=0;
+  for(const c of _impData){
+    const r=await ins({name:c.name||null,company:c.company||null,title:c.title||null,email:c.email||null,phone:c.phone||null,address:c.address||null,tags:Array.isArray(c.tags)?c.tags:[]});
+    if(r)ok++;
+  }
+  btn.innerHTML='<i class="ti ti-check"></i>全件保存';btn.disabled=false;
+  closeImport();
+  alert(ok+'件を登録しました！');
+}
+
+['camOv','manOv','detOv','impOv'].forEach(id=>{document.getElementById(id).addEventListener('click',e=>{if(e.target.id===id)document.getElementById(id).classList.add('h');});});
 
 (async()=>{
   const url=localStorage.getItem('su'),key=localStorage.getItem('sk');
