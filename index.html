@@ -216,7 +216,9 @@ async function doConnect(){
 }
 
 async function go(){
-  h('setup');s('app');
+  document.getElementById('setup').style.display='none';
+  document.getElementById('app').style.display='block';
+  
   const {data,error}=await sb.from('meishi').select('*').order('created_at',{ascending:false});
   if(!error)cards=data||[];
   render();
